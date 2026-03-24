@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lily Garden</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100%;overflow-x:hidden}
+
+body{
+  background:radial-gradient(ellipse at 50% 10%, #1b2268 0%, #080e28 45%, #020610 100%);
+  min-height:100vh;
+  font-family:'Playfair Display',serif;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-end;
+  position:relative;
+}
+
+.sparkle {
+  fill: #ffffff; 
+  filter: blur(1.5px);
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+/* stars sit behind everything */
+#star-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  /* Add these two lines to stop the movement */
+  transform: none !important;
+  animation: none !important;
+}
+
+/* bouquet floats above the bottom */
+.bouquet-wrap{
+  position:relative;z-index:2;
+  width:min(560px,92vw);   /* wider canvas so flowers breathe */
+  margin-bottom:-4px;
+  flex-shrink:0;
+}
+.bouquet-wrap svg{width:100%;height:auto;overflow:visible}
+
+/* gift section — transparent background so stars show through */
+.gift-area{
+  position:relative;z-index:4;width:100%;
+  background:transparent;
+  display:flex;flex-direction:column;align-items:center;
+  padding:36px 20px 72px;
+}
+
+/* ── gift box ── */
+.gift-outer{
+  cursor:pointer;position:relative;
+  width:210px;height:216px;perspective:900px;
+}
+.gift-body{
+  position:absolute;bottom:0;left:5px;
+  width:200px;height:158px;
+  background:linear-gradient(145deg,#c2185b,#880e4f);
+  border-radius:8px 8px 12px 12px;
+  box-shadow:0 8px 40px rgba(194,24,91,.5),inset 0 1px 0 rgba(255,180,220,.25);
+}
+.gift-body::after{
+  content:'';position:absolute;left:50%;top:0;transform:translateX(-50%);
+  width:26px;height:100%;background:rgba(255,210,0,.78);border-radius:2px;
+}
+.gift-body::before{
+  content:'';position:absolute;top:50%;left:0;transform:translateY(-50%);
+  width:100%;height:24px;background:rgba(255,210,0,.78);
+}
+.gift-lid{
+  position:absolute;top:10px;left:-5px;
+  width:220px;height:58px;
+  background:linear-gradient(145deg,#e91e8c,#ad1457);
+  border-radius:10px;
+  box-shadow:0 4px 20px rgba(233,30,140,.55),inset 0 1px 0 rgba(255,180,220,.3);
+  transform-origin:top center;
+  transform:rotateX(0deg);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index:5;
+}
+.gift-lid::after{
+  content:'';position:absolute;left:50%;top:0;transform:translateX(-50%);
+  width:26px;height:100%;background:rgba(255,210,0,.78);border-radius:2px;
+}
+.bow{
+  position:absolute;top:-26px;left:50%;transform:translateX(-50%);
+  width:66px;height:42px;z-index:6;
+}
+.bow-l,.bow-r{
+  position:absolute;top:0;width:30px;height:30px;
+  background:radial-gradient(circle at 60% 40%,#ffe566,#ffc800);
+  border-radius:50% 50% 50% 0;
+  box-shadow:0 2px 12px rgba(255,200,0,.45);
+}
+.bow-l{left:0;transform:rotate(-45deg);transform-origin:bottom right}
+.bow-r{right:0;transform:rotate(45deg);transform-origin:bottom left}
+.bow-c{
+  position:absolute;top:9px;left:50%;transform:translateX(-50%);
+  width:18px;height:18px;
+  background:radial-gradient(circle,#ffe566,#ffc800);
+  border-radius:50%;z-index:7;
+}
+
+.gift-hint{
+  margin-top:20px;font-style:italic;
+  color:rgba(255,200,230,.5);font-size:.95rem;letter-spacing:.07em;
+  animation:gpulse 2.5s ease-in-out infinite;
+}
+@keyframes gpulse{
+  0%,100%{opacity:.35}
+  50%{opacity:1;text-shadow:0 0 16px rgba(255,140,200,.65)}
+}
+
+/* ── message overlay ── */
+.overlay{
+  display:none;position:fixed;inset:0;z-index:100;
+  background:rgba(3,5,16,.91);
+  align-items:center;justify-content:center;padding:30px;
+}
+.overlay.open{display:flex;animation:fin .4s ease}
+@keyframes fin{from{opacity:0}to{opacity:1}}
+.msg-card{
+  background:linear-gradient(150deg,#190d28,#0d1a3c);
+  border:1px solid rgba(255,140,200,.3);border-radius:22px;
+  padding:52px 42px;max-width:440px;width:90%;text-align:center;
+  box-shadow:0 0 80px rgba(233,30,140,.2);
+  animation:popin .65s cubic-bezier(.22,1,.36,1);
+}
+@keyframes popin{from{transform:scale(.82);opacity:0}to{transform:scale(1);opacity:1}}
+.msg-emoji{font-size:2.5rem;margin-bottom:20px}
+.msg-text{
+  font-style:italic;font-size:1.25rem;color:#ffe8f5;
+  line-height:1.85;letter-spacing:.02em;
+  text-shadow:0 0 24px rgba(255,140,200,.3);white-space:pre-wrap;
+}
+.msg-close{
+  margin-top:32px;background:none;
+  border:1px solid rgba(255,140,200,.25);border-radius:10px;
+  padding:11px 30px;color:rgba(255,200,230,.55);
+  font-size:.85rem;letter-spacing:.08em;cursor:pointer;
+  transition:border-color .2s,color .2s;
+  font-family:'Playfair Display',serif;
+}
+.msg-close:hover{border-color:rgba(255,140,200,.7);color:#ffe8f5}
+
+/* ── lily animations ── */
+@keyframes grow-stem{
+  from{transform:scaleY(0);transform-origin:50% 100%}
+  to{transform:scaleY(1);transform-origin:50% 100%}
+}
+@keyframes bloom{
+  0%{transform:scale(0) rotate(-18deg);opacity:0}
+  65%{transform:scale(1.06) rotate(2deg);opacity:1}
+  100%{transform:scale(1) rotate(0);opacity:1}
+}
+@keyframes flowerSway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+
+.g-sway {animation: flowerSway 5s ease-in-out infinite;}
+.g-stem{animation:grow-stem 1.4s cubic-bezier(.22,1,.36,1) both}
+.g-bloom{opacity:0;animation:bloom 1.1s cubic-bezier(.22,1,.36,1) forwards}
+.g-sway{animation:flowerSway ease-in-out infinite}
+
+/* ── falling petals ── */
+.petal{
+  position:fixed;pointer-events:none;z-index:1;
+  border-radius:50% 50% 50% 0;
+  animation:pfal linear infinite;
+}
+@keyframes pfal{
+  0%{transform:translateY(-20px) rotate(0deg) translateX(0);opacity:.8}
+  100%{transform:translateY(110vh) rotate(700deg) translateX(70px);opacity:0}
+}
+</style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════╗ -->
+<!-- ║        ✏️  EDIT YOUR GIFT HERE          ║ -->
+<!-- ╚══════════════════════════════════════════╝ -->
+<script>
+// 💌 YOUR MESSAGE — edit between the backticks
+const MESSAGE = `TO MY WIFEEE HELLLURRRR LLOOOKK OHH `;
+
+// 🎵 YOUR SONG — put your mp3 in the same folder,
+// type the filename here e.g. "mysong.mp3"
+// Leave "" for no music.
+const SONG = "mysong.mp3";
+</script>
+<!-- ════════════════════════════════════════════ -->
+
+<canvas id="star-canvas"></canvas>
+<div class="bouquet-wrap" id="bouquet"></div>
+
+<div class="gift-area">
+  <div class="gift-outer" onclick="openGift()">
+    <div class="gift-lid" id="lid">
+      <div class="bow">
+        <div class="bow-l"></div>
+        <div class="bow-r"></div>
+        <div class="bow-c"></div>
+      </div>
+    </div>
+    <div class="gift-body"></div>
+  </div>
+  <div class="gift-hint">✦ tap the gift to open ✦</div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="msg-card">
+    <div class="msg-emoji">🌸</div>
+    <div class="msg-text" id="msg-out"></div>
+    <button class="msg-close" onclick="closeMsg()">✕ &nbsp; close</button>
+  </div>
+</div>
+
+<audio id="audio" loop></audio>
+
+<script>
+// ── STARS (full page) ─────────────────────────────────
+const sc = document.getElementById('star-canvas');
+const sx = sc.getContext('2d');
+function rs(){ sc.width = innerWidth; sc.height = innerHeight; }
+rs(); addEventListener('resize', rs);
+
+const ST = Array.from({length: 260}, () => ({
+  x: Math.random(),
+  y: Math.random(),          // full height, not capped
+  r: .3 + Math.random() * 2,
+  ph: Math.random() * Math.PI * 2,
+  sp: .4 + Math.random() * 1.6,
+  br: .35 + Math.random() * .65
+}));
+
+let tt = 0;
+(function ds(){
+  sx.clearRect(0, 0, sc.width, sc.height);
+  tt += .011;
+  ST.forEach(s => {
+    const a = s.br * (.5 + .5 * Math.sin(tt * s.sp + s.ph));
+    const px = s.x * sc.width, py = s.y * sc.height;
+    const g = sx.createRadialGradient(px, py, 0, px, py, s.r * 5);
+    g.addColorStop(0, `rgba(255,235,255,${a})`);
+    g.addColorStop(1, 'rgba(255,235,255,0)');
+    sx.beginPath(); sx.arc(px, py, s.r * 5, 0, Math.PI*2);
+    sx.fillStyle = g; sx.fill();
+    sx.beginPath(); sx.arc(px, py, s.r, 0, Math.PI*2);
+    sx.fillStyle = `rgba(255,245,255,${a})`; sx.fill();
+  });
+  requestAnimationFrame(ds);
+})();
+
+// ── FALLING PETALS ────────────────────────────────────
+for(let i = 0; i < 16; i++){
+  const p = document.createElement('div');
+  p.className = 'petal';
+  const sz = 7 + Math.random() * 9;
+  p.style.cssText = `
+    left:${Math.random()*100}%;
+    width:${sz}px; height:${sz*1.3}px;
+    animation-duration:${6 + Math.random()*8}s;
+    animation-delay:${Math.random()*12}s;
+    transform:rotate(${Math.random()*360}deg);
+    background:rgba(${215+~~(Math.random()*40)},${80+~~(Math.random()*80)},${155+~~(Math.random()*60)},.4);
+  `;
+  document.body.appendChild(p);
+}
+
+// ── LILY BUILDER ──────────────────────────────────────
+// cx,cy = center, r = radius, gid = gradient id, spot = spot colour
+function makeLily(cx, cy, r, gid, spot){
+  let o = '';
+  // 6 petals — recurving ellipses rotated around center
+  for(let i = 0; i < 6; i++){
+    const a = i * 60;
+    o += `<ellipse cx="${cx}" cy="${cy - r*.56}" rx="${r*.26}" ry="${r*.66}"
+            fill="url(#${gid})" transform="rotate(${a},${cx},${cy})"/>`;
+    // subtle centre vein
+    o += `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - r*1.12}"
+            stroke="rgba(255,80,160,.15)" stroke-width="1.2"
+            transform="rotate(${a},${cx},${cy})"/>`;
+  }
+  // spots
+  for(let i = 0; i < 6; i++){
+    const rad = i * 60 * Math.PI / 180;
+    const dx = Math.sin(rad)*r*.38, dy = -Math.cos(rad)*r*.38;
+    o += `<circle cx="${cx+dx}" cy="${cy+dy}" r="2.4" fill="${spot}" opacity=".5"/>`;
+    o += `<circle cx="${cx+dx*.6}" cy="${cy+dy*.6}" r="1.6" fill="${spot}" opacity=".35"/>`;
+  }
+  // golden centre disc
+  o += `<circle cx="${cx}" cy="${cy}" r="${r*.18}" fill="url(#cg)"/>`;
+  // 6 stamens with pollen tips
+  for(let i = 0; i < 6; i++){
+    const rad = (i * 60 - 20) * Math.PI / 180;
+    const ex = cx + Math.sin(rad)*r*.52, ey = cy - Math.cos(rad)*r*.52;
+    o += `<line x1="${cx}" y1="${cy}" x2="${ex}" y2="${ey}" stroke="#a0004a" stroke-width="1.4" opacity=".8"/>`;
+    o += `<circle cx="${ex}" cy="${ey}" r="2.8" fill="#700035"/>`;
+    o += `<circle cx="${ex}" cy="${ey}" r="1.3" fill="#ffe566" opacity=".9"/>`;
+  }
+  return o;
+}
+
+// ── BUILD BOUQUET SVG ─────────────────────────────────
+(function buildBouquet(){
+  const NS = 'http://www.w3.org/2000/svg';
+  const wrap = document.getElementById('bouquet');
+  const svg = document.createElementNS(NS, 'svg');
+
+  svg.setAttribute('viewBox', '0 0 520 620');
+  svg.setAttribute('xmlns', NS);
+  svg.style.overflow = 'visible';
+
+  // Sparkle Helper
+  function makeSparkles(x, y) {
+    let s = '';
+    for(let i=0; i<4; i++) {
+      const rx = x + (Math.random() - 0.5) * 110;
+      const ry = y + (Math.random() - 0.5) * 110;
+      const size = 1 + Math.random() * 2.5;
+      const delay = Math.random() * 2;
+      s += `<circle cx="${rx}" cy="${ry}" r="${size}" class="sparkle" style="animation-delay:${delay}s"/>`;
+    }
+    return s;
+  }
+
+  svg.innerHTML = `
+  <defs>
+    <radialGradient id="pg1" cx="50%" cy="24%" r="76%"><stop offset="0%" stop-color="#ffe6f6"/><stop offset="50%" stop-color="#ff80c4"/><stop offset="100%" stop-color="#e8336a"/></radialGradient>
+    <radialGradient id="pg2" cx="50%" cy="24%" r="76%"><stop offset="0%" stop-color="#fff4fd"/><stop offset="50%" stop-color="#ffaadc"/><stop offset="100%" stop-color="#d81b77"/></radialGradient>
+    <radialGradient id="pg3" cx="50%" cy="24%" r="76%"><stop offset="0%" stop-color="#ffecfa"/><stop offset="50%" stop-color="#ff96ce"/><stop offset="100%" stop-color="#c2185b"/></radialGradient>
+    <radialGradient id="cg" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fff176"/><stop offset="55%" stop-color="#ffd700"/><stop offset="100%" stop-color="#e6a000"/></radialGradient>
+    <radialGradient id="stG" cx="30%" cy="0%" r="100%"><stop offset="0%" stop-color="#66bb6a"/><stop offset="100%" stop-color="#1b5e20"/></radialGradient>
+    <filter id="gl" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
+
+  const flowerData = [
+    { x: 190, y: 110, r: 52, grad: 'pg3', bend: -40, delay: 0.8 },
+    { x: 330, y: 110, r: 52, grad: 'pg3', bend: 40,  delay: 0.9 },
+    { x: 260, y: 220, r: 62, grad: 'pg2', bend: 0.5,   delay: 0.5 },
+    { x: 120, y: 250, r: 58, grad: 'pg1', bend: -60, delay: 0.6 },
+    { x: 400, y: 250, r: 58, grad: 'pg1', bend: 60,  delay: 0.7 },
+    { x: 180, y: 380, r: 65, grad: 'pg2', bend: -25, delay: 1.1 },
+    { x: 340, y: 380, r: 65, grad: 'pg2', bend: 25,  delay: 1.2 }
+  ];
+
+  let bouquetContent = '';
+  flowerData.forEach(f => {
+    // Each flower and its specific stem are grouped to sway together
+    bouquetContent += `
+      <g class="g-sway" style="transform-origin: 260px 600px; animation-name: flowerSway; animation-delay:${f.delay}s; animation-duration: 5s;">
+        <path d="M260 600 Q${260 + f.bend} 400 ${f.x} ${f.y + 35}" 
+              stroke="url(#stG)" stroke-width="5" fill="none" stroke-linecap="round" />
+        <g class="g-bloom" style="animation-delay:${f.delay}s; transform-origin:${f.x}px ${f.y}px">
+          <g filter="url(#gl)">${makeLily(f.x, f.y, f.r, f.grad, '#ff1a6e')}</g>
+        </g>
+      </g>
+      ${makeSparkles(f.x, f.y)}`;
+  });
+
+  svg.innerHTML += bouquetContent;
+  wrap.appendChild(svg);
+})();
+
+// ── GIFT BOX ──────────────────────────────────────────
+let opened = false;
+
+function openGift() {
+  // If already open, we don't need to do anything
+  if (opened) return; 
+  
+  opened = true;
+  // Moves lid to open position
+  document.getElementById('lid').style.transform = 'rotateX(-128deg)'; 
+  
+  setTimeout(() => {
+    document.getElementById('msg-out').textContent = MESSAGE;
+    document.getElementById('overlay').classList.add('open');
+  }, 720);
+}
+
+function closeMsg() {
+  // 1. Hide the message overlay
+  document.getElementById('overlay').classList.remove('open');
+  
+  // 2. Reset the gift box so it can be clicked again
+  setTimeout(() => {
+    document.getElementById('lid').style.transform = 'rotateX(0deg)';
+    opened = false; // Reset the state
+  }, 300); // Small delay so the overlay disappears first
+}
+
+// ── MUSIC ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if(!SONG) return;
+  const audio = document.getElementById('audio');
+  audio.src = SONG;
+  const play = () => audio.play().catch(() => {});
+  setTimeout(() => {
+    audio.play().catch(() => {
+      ['click','touchstart','keydown'].forEach(e =>
+        document.addEventListener(e, play, {once: true}));
+    });
+  }, 500);
+});
+</script>
+</body>
+</html>
